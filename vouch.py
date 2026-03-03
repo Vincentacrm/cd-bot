@@ -2,17 +2,17 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
+import os
 
 # ------------------- CONFIG -------------------
 GUILD_ID = 948971532431015976
 CONFIG_CHANNEL_ID = 1478282165618737266
-VOUCHES_CHANNEL_ID = 1478334777533927456
+VOUCHES_CHANNEL_ID = 1477973914914132092
 
-ADMIN_ID = 458624557763526666
+ADMIN_ID = 458624557763526666  # Your Discord ID
 
 APPROVE_EMOJI = "✅"
 DECLINE_EMOJI = "❌"
-BOT_TOKEN = "MTQ3ODI3NzEzMzUxNTA5NjA2NA.GQqpmP.Kek2bUoBa_hA6z-gPvB8KXs6Ir3Ycaf8SBBiwo"
 # ---------------------------------------------
 
 intents = discord.Intents.default()
@@ -23,15 +23,17 @@ intents.reactions = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
+# Track processed messages to prevent duplicates
 processed_messages = set()
 
+# --------------- ON READY ---------------
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print(f"[V1x Vouch] Logged in as {bot.user} ✅")
     await tree.sync(guild=discord.Object(id=GUILD_ID))
     print("Slash commands synced!")
 
-# ---------------- VOUCH COMMAND ----------------
+# --------------- VOUCH COMMAND ---------------
 @tree.command(name="vouch", description="Submit a vouch", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(
     seller="Seller's name",
@@ -46,7 +48,7 @@ async def vouch(
     quantity: str,
     proof: discord.Attachment
 ):
-
+    # Validate image type
     if not proof.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         await interaction.response.send_message(
             "⚠ Please upload a valid image (png, jpg, jpeg).",
@@ -54,24 +56,22 @@ async def vouch(
         )
         return
 
+    # Acknowledge immediately to prevent double submission
     await interaction.response.defer(ephemeral=True)
 
     config_channel = bot.get_channel(CONFIG_CHANNEL_ID)
     if not config_channel:
-        await interaction.followup.send("Config channel not found.", ephemeral=True)
+        await interaction.followup.send("⚠ Config channel not found.", ephemeral=True)
         return
 
     embed = discord.Embed(
         title="New Vouch Submission",
         color=discord.Color.blue()
     )
-
     embed.add_field(name="Seller", value=seller, inline=True)
     embed.add_field(name="Product/Service", value=product, inline=True)
     embed.add_field(name="Quantity", value=quantity, inline=True)
-
     embed.set_image(url=proof.url)
-
     embed.set_footer(
         text=f"Submitted by {interaction.user.display_name}",
         icon_url=interaction.user.display_avatar.url
@@ -81,7 +81,6 @@ async def vouch(
         content=f"Vouch from {interaction.user.mention}",
         embed=embed
     )
-
     await message.add_reaction(APPROVE_EMOJI)
     await message.add_reaction(DECLINE_EMOJI)
 
@@ -90,21 +89,17 @@ async def vouch(
         ephemeral=True
     )
 
-# ---------------- APPROVAL SYSTEM ----------------
+# --------------- APPROVAL HANDLER ---------------
 @bot.event
 async def on_reaction_add(reaction, user):
     if user.bot:
         return
-
     if reaction.message.channel.id != CONFIG_CHANNEL_ID:
         return
-
     if user.id != ADMIN_ID:
         return
-
     if reaction.message.id in processed_messages:
         return
-
     if not reaction.message.embeds:
         return
 
@@ -118,16 +113,11 @@ async def on_reaction_add(reaction, user):
         processed_messages.add(reaction.message.id)
 
         date_now = datetime.now().strftime("%d-%m-%Y")
-
         approved_embed = discord.Embed(
             title=f"New Vouch ({date_now})",
             color=discord.Color.green()
         )
-
-        # Mention the submitter
         approved_embed.description = reaction.message.content
-
-        # Copy fields
         for field in original_embed.fields:
             approved_embed.add_field(
                 name=field.name,
@@ -135,7 +125,7 @@ async def on_reaction_add(reaction, user):
                 inline=field.inline
             )
 
-        # 🔥 THIS FIXES THE IMAGE ISSUE
+        # Copy proof image
         if original_embed.image.url:
             approved_embed.set_image(url=original_embed.image.url)
 
@@ -150,4 +140,17 @@ async def on_reaction_add(reaction, user):
         processed_messages.add(reaction.message.id)
         await reaction.message.delete()
 
+# --------------- STICKY COMMAND ---------------
+@tree.command(name="sticky", description="Pin a message in this channel", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(message_id="ID of the message to pin")
+async def sticky(interaction: discord.Interaction, message_id: str):
+    try:
+        message = await interaction.channel.fetch_message(int(message_id))
+        await message.pin()
+        await interaction.response.send_message("Message pinned ✅", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"Error: {e}", ephemeral=True)
+
+# --------------- RUN BOT ---------------
+BOT_TOKEN = os.getenv("TOKEN")  # Use environment variable for safety
 bot.run(BOT_TOKEN)
