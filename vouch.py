@@ -7,7 +7,7 @@ import os
 # ------------------- CONFIG -------------------
 GUILD_ID = 948971532431015976
 CONFIG_CHANNEL_ID = 1478282165618737266
-VOUCHES_CHANNEL_ID = 1477973914914132092
+VOUCHES_CHANNEL_ID = 1478334777533927456
 
 ADMIN_ID = 458624557763526666  # Your Discord ID
 
@@ -150,3 +150,4 @@ async def on_reaction_add(reaction, user):
 # --------------- RUN BOT ---------------
 BOT_TOKEN = os.getenv("TOKEN")  # Use environment variable for safety
 bot.run(BOT_TOKEN)
+
