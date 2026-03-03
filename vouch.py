@@ -34,7 +34,11 @@ async def on_ready():
     print("Slash commands synced!")
 
 # --------------- VOUCH COMMAND ---------------
-@tree.command(name="vouch", description="Submit a vouch", guild=discord.Object(id=GUILD_ID))
+@tree.command(
+    name="vouch", 
+    description="Submit a vouch", 
+    guild=discord.Object(id=GUILD_ID)
+)
 @app_commands.describe(
     seller="Seller's name",
     product="Product/service bought",
@@ -61,7 +65,10 @@ async def vouch(
 
     config_channel = bot.get_channel(CONFIG_CHANNEL_ID)
     if not config_channel:
-        await interaction.followup.send("⚠ Config channel not found.", ephemeral=True)
+        await interaction.followup.send(
+            "⚠ Config channel not found.",
+            ephemeral=True
+        )
         return
 
     embed = discord.Embed(
@@ -139,17 +146,6 @@ async def on_reaction_add(reaction, user):
     elif str(reaction.emoji) == DECLINE_EMOJI:
         processed_messages.add(reaction.message.id)
         await reaction.message.delete()
-
-# --------------- STICKY COMMAND ---------------
-@tree.command(name="sticky", description="Pin a message in this channel", guild=discord.Object(id=GUILD_ID))
-@app_commands.describe(message_id="ID of the message to pin")
-async def sticky(interaction: discord.Interaction, message_id: str):
-    try:
-        message = await interaction.channel.fetch_message(int(message_id))
-        await message.pin()
-        await interaction.response.send_message("Message pinned ✅", ephemeral=True)
-    except Exception as e:
-        await interaction.response.send_message(f"Error: {e}", ephemeral=True)
 
 # --------------- RUN BOT ---------------
 BOT_TOKEN = os.getenv("TOKEN")  # Use environment variable for safety
